@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: helpdesk-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: MONGO_URI
+        fromSecret: MONGO_URI
+      - key: GOOGLE_API_KEY
+        fromSecret: GOOGLE_API_KEY
+      - key: GROQ_API_KEY
+        fromSecret: GROQ_API_KEY
+
+  - type: web
+    name: helpdesk-frontend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run frontend/app.py --server.port 10000
+    envVars:
+      - key: API_URL
+        value: https://helpdesk-backend.onrender.com
