@@ -9,6 +9,12 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 
+st.set_page_config(
+    page_title="IT Helpdesk Portal",
+    page_icon="💼",    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Import the cloud-friendly browser microphone
 try:
     from streamlit_mic_recorder import speech_to_text
@@ -25,11 +31,6 @@ except ImportError:
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
-st.set_page_config(
-    page_title="IT Helpdesk Portal",
-    page_icon="💼",    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MASTER CSS 
