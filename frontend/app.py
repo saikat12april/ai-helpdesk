@@ -9,9 +9,11 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 
+# 🔥 FIX: Move this to the absolute top, before ANY other st. commands execute!
 st.set_page_config(
     page_title="IT Helpdesk Portal",
-    page_icon="💼",    layout="wide",
+    page_icon="💼",    
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -27,16 +29,23 @@ try:
     cookie_controller = CookieController()
 except ImportError:
     cookie_controller = None
+    # This warning safely executes AFTER set_page_config now
     st.warning("Please run: pip install streamlit-cookies-controller")
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MASTER CSS 
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
+/* ── HIDE STREAMLIT DEFAULT UI ELEMENTS ── */
+[data-testid="stHeader"] { visibility: hidden !important; display: none !important; }
+[data-testid="stToolbar"] { visibility: hidden !important; display: none !important; }
+[data-testid="stDecoration"] { visibility: hidden !important; display: none !important; }
+#MainMenu { visibility: hidden !important; display: none !important; }
+footer { visibility: hidden !important; display: none !important; }
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] { font-family:'Inter',system-ui,sans-serif !important; }
@@ -437,12 +446,12 @@ def show_dashboard():
         cc_={"Critical":"cr","High":"hi","Medium":"me","Low":"lo"}
         for t in tickets[:6]:
             p = t.get("priority","Medium")
-            t_id = t.get("id", "")
+            t_id = str(t.get("id", ""))
             t_title = t.get("title", "")[:46]
             t_status = t.get("status", "Open")
             c_class = cc_.get(p, "")
             
-            st.markdown(f"<div class='ticket-container-box {c_class}'><span style='font-weight:700;color:#1B3358'>#{t_id}</span><span style='color:#374151;margin-left:8px;font-size:.9rem'>{t_title}</span><span style='float:right;background:#F1F5F9;color:#475569;padding:3px 9px;border-radius:5px;font-size:.75rem;font-weight:600'>{t_status}</span></div>",unsafe_allow_html=True)
+            st.markdown(f"<div class='ticket-container-box {c_class}'><span style='font-weight:700;color:#1B3358'>#{t_id[:8]}</span><span style='color:#374151;margin-left:8px;font-size:.9rem'>{t_title}</span><span style='float:right;background:#F1F5F9;color:#475569;padding:3px 9px;border-radius:5px;font-size:.75rem;font-weight:600'>{t_status}</span></div>",unsafe_allow_html=True)
         if not tickets: st.info("No tickets yet.")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -479,7 +488,7 @@ def show_chat():
             last=next((m["content"] for m in reversed(st.session_state.chat_history) if m["role"]=="user"),"")
             if last:
                 d,c=api_post("/tickets/create",{"title":last[:80],"description":last,"category":"General","department":"General"})
-                if c==200: st.success(f"Ticket #{d['ticket_id']} created — Priority: {d['priority']}")
+                if c==200: st.success(f"Ticket #{str(d['ticket_id'])[:8]} created — Priority: {d['priority']}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # VOICE ASSISTANT
@@ -544,7 +553,7 @@ def show_voice():
         components.html(f"""<script>var msg = new SpeechSynthesisUtterance("{st.session_state.speak_now}"); window.speechSynthesis.speak(msg);</script>""", height=0, width=0)
         st.session_state.speak_now = "" 
 
-# # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
 # TICKETS
 # ══════════════════════════════════════════════════════════════════════════════
 def show_tickets():
@@ -655,7 +664,6 @@ def show_tickets():
                     if role in ["admin", "it_engineer"] and not is_closed:
                         st.markdown("<br>", unsafe_allow_html=True)
                         
-                        # Find the correct index for the selectbox
                         status_options = ["Open", "In Progress", "Resolved", "Closed"]
                         current_status_index = status_options.index(s) if s in status_options else 0
                         
@@ -675,6 +683,7 @@ def show_tickets():
                     elif role in ["admin", "it_engineer"] and is_closed:
                         st.markdown("<div style='background:#FEF2F2;border:1px solid #FCA5A5;border-radius:7px;padding:10px 14px;margin-top:10px;color:#374151;font-size:.875rem'>This ticket is <strong>permanently Closed</strong> and cannot be updated.</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # SCREENSHOT
 # ══════════════════════════════════════════════════════════════════════════════
@@ -701,7 +710,7 @@ def show_screenshot():
                     if st.button("Create Support Ticket from Analysis"):
                         errors=", ".join(data.get("detected_errors",["Unknown error"]))
                         td,tc=api_post("/tickets/create",{"title":f"Screenshot Error: {errors[:80]}", "description":data.get("extracted_text","Screenshot error"), "category":"Software","department":"General"})
-                        if tc==200: st.success(f"Ticket #{td.get('ticket_id')} created.")
+                        if tc==200: st.success(f"Ticket #{str(td.get('ticket_id'))[:8]} created.")
                 else: st.error("Analysis failed. Please try again.")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -852,20 +861,17 @@ def show_assets():
             st.info("No assets found.")
         else:
             for a in assets:
-                t_id = a.get("id")
+                t_id = str(a.get("id", ""))
                 tag = a.get("asset_tag", "Unknown")
                 current_status = a.get("status", "Available")
                 
-                # Check if the status is valid to prevent index errors
                 status_options = ["Available", "Assigned", "In Repair", "Retired"]
                 if current_status not in status_options:
                     current_status = "Available"
                 
                 with st.expander(f"📦 {tag} | Type: {a.get('asset_type', 'N/A')} | Status: {current_status}"):
-                    # Form details just for display logic
                     st.markdown(f"**Brand:** {a.get('brand', 'N/A')} &nbsp; | &nbsp; **Model:** {a.get('model', 'N/A')} &nbsp; | &nbsp; **Serial:** {a.get('serial_number', 'N/A')}")
                     
-                    # Update Section
                     new_s = st.selectbox("Change Status", status_options, 
                                          index=status_options.index(current_status),
                                          key=f"s_{t_id}")
@@ -929,7 +935,7 @@ def show_analytics():
 
     if raw:
         st.markdown("<p class='sec-hdr'>All Ticket Records</p>",unsafe_allow_html=True)
-        df=pd.DataFrame([{"ID":t["id"],"Title":t["title"][:50],"Priority":t.get("priority",""), "Status":t.get("status",""),"Category":t.get("category",""),"Department":t.get("department","")} for t in raw])
+        df=pd.DataFrame([{"ID":str(t["id"])[:8],"Title":t["title"][:50],"Priority":t.get("priority",""), "Status":t.get("status",""),"Category":t.get("category",""),"Department":t.get("department","")} for t in raw])
         st.dataframe(df,use_container_width=True,hide_index=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -946,7 +952,7 @@ def show_user_management():
         else:
             st.info(f"{len(pending)} registration(s) awaiting your approval.")
             for u in pending:
-                u_id = u.get('id')
+                u_id = str(u.get('id', ''))
                 u_name = u.get('name', 'Unknown')
                 u_email = u.get('email', 'N/A')
                 u_dept = u.get('department', 'General')
@@ -980,7 +986,7 @@ def show_user_management():
         rc_ = {"admin": "#DC2626", "it_engineer": "#D97706", "employee": "#16A34A"}
         
         for u in users:
-            u_id = u.get('id')
+            u_id = str(u.get('id', ''))
             if not u_id: continue
             
             ok = u.get("is_approved", False) and u.get("is_active", True)
